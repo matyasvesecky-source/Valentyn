@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budeš můj Valentýn?</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #ffe6eb;
+            --card-bg: #ffffff;
+            --primary-color: #ff6b81;
+            --btn-yes: #2ecc71;
+            --btn-no: #ff4757;
+            --text-color: #2f3542;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            background-color: var(--bg-color);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; 
+            flex-direction: column;
+        }
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 90%;
+            width: 400px;
+            position: relative;
+            transition: transform 0.1s;
+            z-index: 10;
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .gif-container {
+            margin-bottom: 1.5rem;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gif-container img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+            object-fit: contain;
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            line-height: 1.2;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            min-height: 60px;
+        }
+
+        button {
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Fredoka One', cursive;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+
+        .btn-yes {
+            background-color: var(--btn-yes);
+            color: white;
+            z-index: 20; 
+        }
+
+        .btn-no {
+            background-color: var(--btn-no);
+            color: white;
+            position: relative;
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.5rem; }
+            .container { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="container" id="main-card">
+        <div class="gif-container">
+            <img id="cat-img" src="" alt="Roztomilá kočka">
+        </div>
+        
+        <h1 id="question-text">Budeš můj Valentýn?</h1>
+        
+        <div class="buttons">
+            <button class="btn-yes" id="yes-btn" onclick="handleYes()">ANO</button>
+            <button class="btn-no" id="no-btn" onclick="handleNo()">NE</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ==========================================
+         * KONFIGURACE OBRÁZKŮ
+         * ==========================================
+         */
+        const CONFIG_VALENTINE = {
+            images: {
+                start: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHIyc3J3amZpZzRreXN6ZzRycXN6ZzRycXN6ZzRycXN6ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/cLS1cfxvGOPVpf9g3y/giphy.gif",
+                mood1: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjByYnAyNGV3Y2x1bDJxZXRlY3E5dTBmZ2wxcXgybzRzODdodzNheCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1D1ysSBoLxAJImgZlx/giphy.gif",
+                mood2: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDhhcHhkbW9jOWk0aDI5ZzQ2bWtkeXRoNzVudXNwYWh2OWR1dHplMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/RZ77nGlVaYGOjc8s0C/giphy.gif",
+                mood4: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWY2YmllZDNpajIzMTdpemU1bHNiaG1lOWxxaHpzNTU3Mjhvcml2YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/iue7H4vfuHS94vFqqk/giphy.gif",
+                mood5: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExanVod25tbWVvbm82ZHYxam1ldW9kZ2M4d2J5bXhlbnViM3JudmlyZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/e1Tf1eOo6976zuGv3C/giphy.gif",
+                mood6: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNzgxZ3YxYmp4azBhMXA0cDNjZG0xaW9ibXZiY2wwdWNkbjc5aXNiOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/CLglHA19D3Q2qNAbP4/giphy.gif",
+                success: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDM2Z25sMTg5ZGh2MTlzdzZhdGJ3bDRnZnhpajAzMTFtN2loZmxkZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/rT7WPCciy8oETxLmUV/giphy.gif"
+            },
+            
+            noTexts: [
+                "NE",
+                "Jsi si jistá?",
+                "Vážně ne?",
+                "Prosím 🥺",
+                "To bolí!",
+                "Už mě nemáš ráda?",
+                "Beru si nůž! 🔪",
+                "Jsem duch... 👻",
+                "Už jsem mrtvá 💀",
+                "Duše pláče...",
+                "Budeš litovat"
+            ],
+
+            successText: "Jupííí! Věděl jsem to! ❤️ Děkuji!"
+        };
+
+        // Definice pořadí fází
+        const moodOrder = [
+            CONFIG_VALENTINE.images.start,  // 0
+            CONFIG_VALENTINE.images.mood1,  // 1
+            CONFIG_VALENTINE.images.mood2,  // 2
+            CONFIG_VALENTINE.images.mood4,  // 3
+            CONFIG_VALENTINE.images.mood5,  // 4
+            CONFIG_VALENTINE.images.mood6   // 5 (Konec)
+        ];
+
+        let noClickCount = 0;
+        const catImg = document.getElementById('cat-img');
+        const questionText = document.getElementById('question-text');
+        const yesBtn = document.getElementById('yes-btn');
+        const noBtn = document.getElementById('no-btn');
+        const card = document.getElementById('main-card');
+
+        // Inicializace
+        catImg.src = moodOrder[0];
+
+        function handleNo() {
+            noClickCount++;
+
+            // 1. Změna textu (cyklicky, ať je to zajímavé)
+            const textIndex = noClickCount % CONFIG_VALENTINE.noTexts.length;
+            noBtn.innerText = CONFIG_VALENTINE.noTexts[textIndex];
+
+            // 2. Zvětšení tlačítka ANO
+            const currentSize = 1 + (noClickCount * 0.4); 
+            yesBtn.style.transform = `scale(${currentSize})`;
+
+            // 3. Posun tlačítka NE
+            const randomX = (Math.random() - 0.5) * 80;
+            const randomY = (Math.random() - 0.5) * 80;
+            noBtn.style.transform = `translate(${randomX}px, ${randomY}px) scale(${Math.max(0.6, 1 - noClickCount * 0.05)})`;
+
+            // 4. Změna obrázku (ZASTAVÍ SE NA POSLEDNÍM)
+            // Math.min zajistí, že index nikdy nepřekročí poslední prvek pole
+            const moodIndex = Math.min(noClickCount, moodOrder.length - 1);
+            catImg.src = moodOrder[moodIndex];
+
+            // Jemný zoom efekt animace
+            catImg.style.transform = `scale(1)`; 
+            requestAnimationFrame(() => {
+                catImg.style.transform = `scale(1.1)`;
+                setTimeout(() => catImg.style.transform = `scale(1)`, 200);
+            });
+
+            // 5. Třes obrazovky
+            card.classList.remove('shake');
+            void card.offsetWidth; 
+            card.classList.add('shake');
+        }
+
+        function handleYes() {
+            document.querySelector('.buttons').style.display = 'none';
+            questionText.innerText = CONFIG_VALENTINE.successText;
+            questionText.style.fontSize = "2rem";
+            catImg.src = CONFIG_VALENTINE.images.success;
+            catImg.style.transform = 'scale(1.2)';
+            startConfetti();
+        }
+
+        // --- Confetti / Srdíčka ---
+        const canvas = document.getElementById("confetti-canvas");
+        const ctx = canvas.getContext("2d");
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createHeart(x, y) {
+            return {
+                x: x,
+                y: y,
+                size: Math.random() * 20 + 10,
+                speedY: Math.random() * 3 + 2,
+                speedX: (Math.random() - 0.5) * 4,
+                color: `hsl(${Math.random() * 60 + 330}, 100%, 70%)`, 
+                rotation: Math.random() * 360,
+                rotationSpeed: (Math.random() - 0.5) * 10
+            };
+        }
+
+        function startConfetti() {
+            for (let i = 0; i < 100; i++) {
+                particles.push(createHeart(Math.random() * canvas.width, -50));
+            }
+            animateConfetti();
+        }
+
+        function drawHeart(p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate((p.rotation * Math.PI) / 180);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            let topCurveHeight = p.size * 0.3;
+            ctx.moveTo(0, topCurveHeight);
+            ctx.bezierCurveTo(0, 0, -p.size / 2, 0, -p.size / 2, topCurveHeight);
+            ctx.bezierCurveTo(-p.size / 2, (p.size + topCurveHeight) / 2, 0, (p.size + topCurveHeight) / 2, 0, p.size);
+            ctx.bezierCurveTo(0, (p.size + topCurveHeight) / 2, p.size / 2, (p.size + topCurveHeight) / 2, p.size / 2, topCurveHeight);
+            ctx.bezierCurveTo(p.size / 2, 0, 0, 0, 0, topCurveHeight);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (Math.random() < 0.1) particles.push(createHeart(Math.random() * canvas.width, -50));
+            
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                p.y += p.speedY;
+                p.x += p.speedX;
+                p.rotation += p.rotationSpeed;
+                drawHeart(p);
+                if (p.y > canvas.height) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+            requestAnimationFrame(animateConfetti);
+        }
+    </script>
+</body>
+</html>
